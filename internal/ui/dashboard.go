@@ -72,7 +72,10 @@ func RenderDashboard(mode, target, filter string) error {
 		case "cancelled":
 			return s == "CANCELLED"
 		default: // active
-			return s == "ACTIVE" || s == "IN-PROGRESS" || s == "BACKLOG"
+			if eType == "task" {
+				return s == "ACTIVE" || s == "IN-PROGRESS" || s == "BACKLOG"
+			}
+			return s == "ACTIVE" || s == "IN-PROGRESS"
 		}
 	}
 
