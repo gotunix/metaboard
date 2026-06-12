@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Comprehensive test suite for `internal/models` and `internal/store`.
 - `make test` target in Makefile for easy test execution.
+- `make install` and `make uninstall` targets with `PREFIX` support.
 - Project ASCII logo and custom license headers to all source files.
 - `internal/store` helpers: `GetMilestone`, `GetStory`, `GetTask`, and `EnsureTaskPlan`.
 - `TaskUpdate` struct for centralized task field mapping.
