@@ -562,14 +562,22 @@ func renderWindow(sb *strings.Builder, title, content string, width int) {
 		subStyle.Render(strings.Repeat(border.Top, dR)+border.TopRight) + "\n")
 
 	// 2. Content with Lipgloss managed width and padding
+	// We use the full width minus borders and padding for the internal wrap
+	// Then we iterate over the lines rendered by lipgloss
 	contentStyle := lipgloss.NewStyle().
-		Width(width-2). // Width between bars
-		Padding(0, 2)   // 2 cells of padding on each side
+		Width(width - 2). // Exact width between borders
+		Padding(0, 2)     // Internal padding
 
-	lines := strings.Split(content, "\n")
+	renderedContent := contentStyle.Render(content)
+	lines := strings.Split(renderedContent, "\n")
+	
 	for _, line := range lines {
-		renderedLine := contentStyle.Render(line)
-		sb.WriteString(subStyle.Render("│") + renderedLine + subStyle.Render("│") + "\n")
+		// Calculate how much space is left after lipgloss padding
+		// lipgloss.Width(line) should match width-2 now
+		lineW := lipgloss.Width(line)
+		padding := (width - 2) - lineW
+		
+		sb.WriteString(subStyle.Render("│") + line + strings.Repeat(" ", padding) + subStyle.Render("│") + "\n")
 	}
 
 	// 3. Bottom Border
