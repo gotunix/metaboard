@@ -55,7 +55,7 @@ func EditMilestoneInteractive(idOrSlug string) error {
 		return fmt.Errorf("milestone %q not found", idOrSlug)
 	}
 
-	descStr := strings.Join(m.Description, "\n")
+	descStr := m.Description
 	storiesStr := strings.Join(m.Stories, ", ")
 	tasksStr := strings.Join(m.Tasks, ", ")
 
@@ -93,10 +93,7 @@ func EditMilestoneInteractive(idOrSlug string) error {
 		return err
 	}
 
-	m.Description = strings.Split(descStr, "\n")
-	for len(m.Description) > 0 && m.Description[len(m.Description)-1] == "" {
-		m.Description = m.Description[:len(m.Description)-1]
-	}
+	m.Description = strings.TrimSpace(descStr)
 
 	m.Stories = []string{}
 	for _, id := range strings.Split(storiesStr, ",") {
@@ -138,7 +135,7 @@ func EditStoryInteractive(idOrSlug string) error {
 		return fmt.Errorf("story %q not found", idOrSlug)
 	}
 
-	descStr := strings.Join(s.Description, "\n")
+	descStr := s.Description
 	tasksStr := strings.Join(s.Tasks, ", ")
 
 	theme := huh.ThemeCharm()
@@ -174,10 +171,7 @@ func EditStoryInteractive(idOrSlug string) error {
 		return err
 	}
 
-	s.Description = strings.Split(descStr, "\n")
-	for len(s.Description) > 0 && s.Description[len(s.Description)-1] == "" {
-		s.Description = s.Description[:len(s.Description)-1]
-	}
+	s.Description = strings.TrimSpace(descStr)
 
 	s.Tasks = []string{}
 	for _, id := range strings.Split(tasksStr, ",") {
@@ -212,7 +206,7 @@ func EditTaskInteractive(idOrSlug string) error {
 		return fmt.Errorf("task %q not found", idOrSlug)
 	}
 
-	descStr := strings.Join(t.Description, "\n")
+	descStr := t.Description
 	//	tagsStr := strings.Join(t.Tags, ", ")
 	//	depsStr := strings.Join(t.DependsOn, ", ")
 
@@ -264,10 +258,7 @@ func EditTaskInteractive(idOrSlug string) error {
 		return err
 	}
 
-	t.Description = strings.Split(descStr, "\n")
-	for len(t.Description) > 0 && t.Description[len(t.Description)-1] == "" {
-		t.Description = t.Description[:len(t.Description)-1]
-	}
+	t.Description = strings.TrimSpace(descStr)
 
 	//	t.Tags = []string{}
 	//	for _, tag := range strings.Split(tagsStr, ",") {

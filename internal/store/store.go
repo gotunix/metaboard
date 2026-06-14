@@ -43,38 +43,129 @@ import (
 
 // --- Path Helpers ---
 
-func GetMilestonesDir() string {
-	return "milestones"
+var (
+	dataDir     string
+	resolvedDir string
+)
+
+// SetDataDir explicitly sets the base directory for all data.
+func SetDataDir(dir string) {
+	dataDir = dir
+	resolvedDir = "" // Reset cached resolution
 }
 
-func GetStoriesDir() string {
-	return "stories"
+// Initialize creates the necessary directory structure in the specified path.
+func Initialize(path string) error {
+	dirs := []string{"milestones", "stories", "tasks"}
+	for _, d := range dirs {
+		fullPath := filepath.Join(path, d)
+		if err := os.MkdirAll(fullPath, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %q: %w", fullPath, err)
+		}
+		// Create .gitkeep to ensure empty directories are tracked
+		keepPath := filepath.Join(fullPath, ".gitkeep")
+		if err := os.WriteFile(keepPath, []byte(""), 0644); err != nil {
+			return fmt.Errorf("failed to create .gitkeep in %q: %w", fullPath, err)
+		}
+	}
+	return nil
 }
 
-func GetTasksDir() string {
-	return "tasks"
+// GetDataRoot returns the discovered or explicitly set data root.
+// It looks for milestones, stories, and tasks in '.' first, then './metadata'.
+func GetDataRoot() (string, error) {
+	if dataDir != "" {
+		return dataDir, nil
+	}
+	if resolvedDir != "" {
+		return resolvedDir, nil
+	}
+
+	// Heuristic: check '.' for standard data directories
+	dirs := []string{"milestones", "stories", "tasks"}
+	foundInCurrent := false
+	for _, d := range dirs {
+		if _, err := os.Stat(d); err == nil {
+			foundInCurrent = true
+			break
+		}
+	}
+	if foundInCurrent {
+		resolvedDir = "."
+		return resolvedDir, nil
+	}
+
+	// Check 'metadata'
+	foundInMetadata := false
+	for _, d := range dirs {
+		if _, err := os.Stat(filepath.Join("metadata", d)); err == nil {
+			foundInMetadata = true
+			break
+		}
+	}
+	if foundInMetadata {
+		resolvedDir = "metadata"
+		return resolvedDir, nil
+	}
+
+	return "", fmt.Errorf("metaboard data not found. Run 'metaboard init' to initialize this repository")
 }
 
-func GetTaskPath(id string) string {
+func GetMilestonesDir() (string, error) {
+	root, err := GetDataRoot()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "milestones"), nil
+}
+
+func GetStoriesDir() (string, error) {
+	root, err := GetDataRoot()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "stories"), nil
+}
+
+func GetTasksDir() (string, error) {
+	root, err := GetDataRoot()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "tasks"), nil
+}
+
+func GetTaskPath(id string) (string, error) {
+	dir, err := GetTasksDir()
+	if err != nil {
+		return "", err
+	}
 	if len(id) < 2 {
-		return filepath.Join(GetTasksDir(), id+".json")
+		return filepath.Join(dir, id+".json"), nil
 	}
 	prefix := id[:2]
-	return filepath.Join(GetTasksDir(), prefix, id+".json")
+	return filepath.Join(dir, prefix, id+".json"), nil
 }
 
-func GetTaskPlanPath(id string) string {
+func GetTaskPlanPath(id string) (string, error) {
+	dir, err := GetTasksDir()
+	if err != nil {
+		return "", err
+	}
 	if len(id) < 2 {
-		return filepath.Join(GetTasksDir(), id+".md")
+		return filepath.Join(dir, id+".md"), nil
 	}
 	prefix := id[:2]
-	return filepath.Join(GetTasksDir(), prefix, id+".md")
+	return filepath.Join(dir, prefix, id+".md"), nil
 }
 
 // --- List Functions ---
 
 func ListMilestones() ([]models.Milestone, error) {
-	dir := GetMilestonesDir()
+	dir, err := GetMilestonesDir()
+	if err != nil {
+		return nil, err
+	}
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -101,7 +192,10 @@ func ListMilestones() ([]models.Milestone, error) {
 }
 
 func ListStories() ([]models.Story, error) {
-	dir := GetStoriesDir()
+	dir, err := GetStoriesDir()
+	if err != nil {
+		return nil, err
+	}
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -128,10 +222,13 @@ func ListStories() ([]models.Story, error) {
 }
 
 func ListTasks() ([]models.Task, error) {
-	dir := GetTasksDir()
+	dir, err := GetTasksDir()
+	if err != nil {
+		return nil, err
+	}
 	var tasks []models.Task
 
-	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+	err = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -162,23 +259,20 @@ func CreateMilestone(title, slug, description string) (string, error) {
 	}
 	id := uuid.New().String()
 
-	descLines := []string{}
-	if description != "" {
-		descLines = strings.Split(description, "\\n")
-	}
-
 	m := models.Milestone{
 		ID:          id,
 		Title:       title,
 		Slug:        slug,
 		Status:      "BACKLOG",
-		Description: descLines,
+		Description: strings.ReplaceAll(description, "\\n", "\n"),
 		Stories:     []string{},
 		Tasks:       []string{},
 	}
 
-	dir := GetMilestonesDir()
-	os.MkdirAll(dir, 0755)
+	dir, err := GetMilestonesDir()
+	if err != nil {
+		return "", err
+	}
 
 	path := filepath.Join(dir, id+".json")
 	data, _ := json.MarshalIndent(m, "", "  ")
@@ -210,22 +304,19 @@ func CreateStory(title, slug, description string) (string, error) {
 	}
 	id := uuid.New().String()
 
-	descLines := []string{}
-	if description != "" {
-		descLines = strings.Split(description, "\\n")
-	}
-
 	s := models.Story{
 		ID:          id,
 		Title:       title,
 		Slug:        slug,
 		Status:      "BACKLOG",
-		Description: descLines,
+		Description: strings.ReplaceAll(description, "\\n", "\n"),
 		Tasks:       []string{},
 	}
 
-	dir := GetStoriesDir()
-	os.MkdirAll(dir, 0755)
+	dir, err := GetStoriesDir()
+	if err != nil {
+		return "", err
+	}
 
 	path := filepath.Join(dir, id+".json")
 	data, _ := json.MarshalIndent(s, "", "  ")
@@ -257,11 +348,6 @@ func CreateTask(title, slug, priority, taskType, assignedTo, description string)
 	}
 	id := uuid.New().String()
 
-	descLines := []string{}
-	if description != "" {
-		descLines = strings.Split(description, "\\n")
-	}
-
 	t := models.Task{
 		ID:          id,
 		Slug:        slug,
@@ -270,14 +356,17 @@ func CreateTask(title, slug, priority, taskType, assignedTo, description string)
 		Priority:    strings.ToUpper(priority),
 		Type:        strings.ToUpper(taskType),
 		AssignedTo:  assignedTo,
-		Description: descLines,
+		Description: strings.ReplaceAll(description, "\\n", "\n"),
 		CreatedAt:   time.Now().Format("2006-01-02T15:04:05Z"),
 		Tags:        []string{},
 		DependsOn:   []string{},
 	}
 
-	path := GetTaskPath(id)
-	os.MkdirAll(filepath.Dir(path), 0755)
+	path, err := GetTaskPath(id)
+	if err != nil {
+		return "", err
+	}
+	os.MkdirAll(filepath.Dir(path), 0755) // Still need to create shard directory if sharding
 	data, _ := json.MarshalIndent(t, "", "  ")
 	return slug, os.WriteFile(path, data, 0644)
 }
@@ -302,18 +391,30 @@ func GenerateNextTaskSlug(prefix string) string {
 }
 
 func SaveMilestone(m models.Milestone) error {
+	dir, err := GetMilestonesDir()
+	if err != nil {
+		return err
+	}
 	data, _ := json.MarshalIndent(m, "", "  ")
-	return os.WriteFile(filepath.Join(GetMilestonesDir(), m.ID+".json"), data, 0644)
+	return os.WriteFile(filepath.Join(dir, m.ID+".json"), data, 0644)
 }
 
 func SaveStory(s models.Story) error {
+	dir, err := GetStoriesDir()
+	if err != nil {
+		return err
+	}
 	data, _ := json.MarshalIndent(s, "", "  ")
-	return os.WriteFile(filepath.Join(GetStoriesDir(), s.ID+".json"), data, 0644)
+	return os.WriteFile(filepath.Join(dir, s.ID+".json"), data, 0644)
 }
 
 func SaveTask(t models.Task) error {
+	path, err := GetTaskPath(t.ID)
+	if err != nil {
+		return err
+	}
 	data, _ := json.MarshalIndent(t, "", "  ")
-	return os.WriteFile(GetTaskPath(t.ID), data, 0644)
+	return os.WriteFile(path, data, 0644)
 }
 
 func UpdateMilestoneStatus(idOrSlug, newStatus string) error {
@@ -397,7 +498,7 @@ func UpdateTask(idOrSlug string, update TaskUpdate) error {
 		t.AssignedTo = *update.AssignedTo
 	}
 	if update.Description != nil {
-		t.Description = strings.Split(*update.Description, "\\n")
+		t.Description = strings.ReplaceAll(*update.Description, "\\n", "\n")
 	}
 	if update.Tags != nil {
 		t.Tags = *update.Tags
@@ -418,9 +519,12 @@ func UpdateTask(idOrSlug string, update TaskUpdate) error {
 }
 
 func GetMilestone(idOrSlug string) (*models.Milestone, error) {
-	ms, _ := ListMilestones()
+	ms, err := ListMilestones()
+	if err != nil {
+		return nil, err
+	}
 	for _, m := range ms {
-		if m.ID == idOrSlug || m.Slug == idOrSlug {
+		if m.ID == idOrSlug || m.Slug == idOrSlug || m.Title == idOrSlug {
 			return &m, nil
 		}
 	}
@@ -428,9 +532,12 @@ func GetMilestone(idOrSlug string) (*models.Milestone, error) {
 }
 
 func GetStory(idOrSlug string) (*models.Story, error) {
-	ss, _ := ListStories()
+	ss, err := ListStories()
+	if err != nil {
+		return nil, err
+	}
 	for _, s := range ss {
-		if s.ID == idOrSlug || s.Slug == idOrSlug {
+		if s.ID == idOrSlug || s.Slug == idOrSlug || s.Title == idOrSlug {
 			return &s, nil
 		}
 	}
@@ -438,9 +545,12 @@ func GetStory(idOrSlug string) (*models.Story, error) {
 }
 
 func GetTask(idOrSlug string) (*models.Task, error) {
-	ts, _ := ListTasks()
+	ts, err := ListTasks()
+	if err != nil {
+		return nil, err
+	}
 	for _, t := range ts {
-		if t.ID == idOrSlug || t.Slug == idOrSlug {
+		if t.ID == idOrSlug || t.Slug == idOrSlug || t.Title == idOrSlug {
 			return &t, nil
 		}
 	}
@@ -456,7 +566,10 @@ func EnsureTaskPlan(idOrSlug string) (string, error) {
 		return "", fmt.Errorf("only tasks can have implementation plans")
 	}
 
-	planPath := GetTaskPlanPath(resolved.ID)
+	planPath, err := GetTaskPlanPath(resolved.ID)
+	if err != nil {
+		return "", err
+	}
 	if _, err := os.Stat(planPath); os.IsNotExist(err) {
 		template := "# Implementation Plan: " + idOrSlug + "\n\n## Context\n- \n\n## Technical Approach\n- \n\n## Acceptance Criteria\n- [ ] \n\n## Work Tree\n- [ ] \n"
 		if err := os.WriteFile(planPath, []byte(template), 0644); err != nil {
@@ -483,22 +596,31 @@ type ResolvedEntity struct {
 }
 
 func ResolveEntity(idOrSlug string) (*ResolvedEntity, error) {
-	ms, _ := ListMilestones()
-	for _, m := range ms {
-		if m.ID == idOrSlug || m.Slug == idOrSlug || m.Title == idOrSlug {
-			return &ResolvedEntity{ID: m.ID, Type: TypeMilestone, Path: filepath.Join(GetMilestonesDir(), m.ID+".json")}, nil
+	ms, err := ListMilestones()
+	if err == nil {
+		for _, m := range ms {
+			if m.ID == idOrSlug || m.Slug == idOrSlug || m.Title == idOrSlug {
+				dir, _ := GetMilestonesDir()
+				return &ResolvedEntity{ID: m.ID, Type: TypeMilestone, Path: filepath.Join(dir, m.ID+".json")}, nil
+			}
 		}
 	}
-	ss, _ := ListStories()
-	for _, s := range ss {
-		if s.ID == idOrSlug || s.Slug == idOrSlug || s.Title == idOrSlug {
-			return &ResolvedEntity{ID: s.ID, Type: TypeStory, Path: filepath.Join(GetStoriesDir(), s.ID+".json")}, nil
+	ss, err := ListStories()
+	if err == nil {
+		for _, s := range ss {
+			if s.ID == idOrSlug || s.Slug == idOrSlug || s.Title == idOrSlug {
+				dir, _ := GetStoriesDir()
+				return &ResolvedEntity{ID: s.ID, Type: TypeStory, Path: filepath.Join(dir, s.ID+".json")}, nil
+			}
 		}
 	}
-	ts, _ := ListTasks()
-	for _, t := range ts {
-		if t.ID == idOrSlug || t.Slug == idOrSlug || t.Title == idOrSlug {
-			return &ResolvedEntity{ID: t.ID, Type: TypeTask, Path: GetTaskPath(t.ID)}, nil
+	ts, err := ListTasks()
+	if err == nil {
+		for _, t := range ts {
+			if t.ID == idOrSlug || t.Slug == idOrSlug || t.Title == idOrSlug {
+				path, _ := GetTaskPath(t.ID)
+				return &ResolvedEntity{ID: t.ID, Type: TypeTask, Path: path}, nil
+			}
 		}
 	}
 	return nil, fmt.Errorf("entity %q not found", idOrSlug)

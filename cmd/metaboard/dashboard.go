@@ -31,6 +31,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"gotunix.net/metaboard/internal/ui"
 )
@@ -48,7 +49,18 @@ var dashboardCmd = &cobra.Command{
 			target = args[0]
 		}
 		if err := ui.RenderDashboard(mode, target, "active"); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
+		}
+	},
+}
+
+var dashboardAllCmd = &cobra.Command{
+	Use:     "all",
+	Aliases: []string{"everything"},
+	Short:   "Show all items regardless of status",
+	Run: func(cmd *cobra.Command, args []string) {
+		if err := ui.RenderDashboard("all", "", "all"); err != nil {
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		}
 	},
 }
@@ -59,7 +71,7 @@ var dashboardClosedCmd = &cobra.Command{
 	Short:   "Show closed/completed items",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := ui.RenderDashboard("all", "", "closed"); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		}
 	},
 }
@@ -70,7 +82,7 @@ var dashboardCancelledCmd = &cobra.Command{
 	Short:   "Show cancelled items",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := ui.RenderDashboard("all", "", "cancelled"); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		}
 	},
 }
@@ -78,6 +90,7 @@ var dashboardCancelledCmd = &cobra.Command{
 func init() {
 	dashboardCmd.SetHelpFunc(ui.HandleHelp)
 	dashboardCmd.SetUsageFunc(ui.HandleUsage)
+	dashboardCmd.AddCommand(dashboardAllCmd)
 	dashboardCmd.AddCommand(dashboardClosedCmd)
 	dashboardCmd.AddCommand(dashboardCancelledCmd)
 	rootCmd.AddCommand(dashboardCmd)

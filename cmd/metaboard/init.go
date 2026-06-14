@@ -12,42 +12,39 @@
 //  |__/     |__/ \_______/   \___/   \_______/|_______/  \______/  \_______/|__/       \_______/  //
 //                                                                                                 //
 // =============================================================================================== //
-// This program is free software: you can redistribute it and/or modify                            //
-// it under the terms of the GNU Affero General Public License as                                  //
-// published by the Free Software Foundation, either version 3 of the                              //
-// License, or (at your option) any later version.                                                 //
-//                                                                                                 //
-// This program is distributed in the hope that it will be useful,                                 //
-// but WITHOUT ANY WARRANTY; without even the implied warranty of                                  //
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                                   //
-// GNU Affero General Public License for more details.                                             //
-//                                                                                                 //
-// You should have received a copy of the GNU Affero General Public License                        //
-// along with this program.  If not, see <https://www.gnu.org/licenses/>.                          //
-// =============================================================================================== //
 
 package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
+	"gotunix.net/metaboard/internal/store"
 	"gotunix.net/metaboard/internal/ui"
 )
 
-var backlogCmd = &cobra.Command{
-	Use:   "backlog",
-	Short: "Show unlinked entities",
+var initCmd = &cobra.Command{
+	Use:   "init [path]",
+	Short: "Initialize a new metaboard project",
+	Long:  "Create the required directory structure (milestones, stories, tasks) in the specified path (defaults to ./metadata).",
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := ui.RenderBacklog(); err != nil {
-			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
+		path := "metadata"
+		if len(args) > 0 {
+			path = args[0]
 		}
+
+		if err := store.Initialize(path); err != nil {
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
+			os.Exit(1)
+		}
+
+		fmt.Println(ui.BoldStyle.Foreground(ui.Green).Render(fmt.Sprintf("✔ Initialized metaboard in %q", path)))
 	},
 }
 
 func init() {
-	backlogCmd.SetHelpFunc(ui.HandleHelp)
-	backlogCmd.SetUsageFunc(ui.HandleUsage)
-	rootCmd.AddCommand(backlogCmd)
+	rootCmd.AddCommand(initCmd)
 }

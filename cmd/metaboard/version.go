@@ -31,6 +31,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"gotunix.net/metaboard/internal/ui"
 )
@@ -40,7 +41,7 @@ var versionCmd = &cobra.Command{
 	Short: "Display application and dependency versions",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := ui.RenderVersion(); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		}
 	},
 }

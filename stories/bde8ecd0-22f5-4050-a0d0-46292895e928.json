@@ -1,0 +1,12 @@
+{
+  "id": "bde8ecd0-22f5-4050-a0d0-46292895e928",
+  "title": "TUI Dashboard Enhancements",
+  "slug": "s-1",
+  "status": "ACTIVE",
+  "description": "Polishing the terminal user interface for better readability and interaction.",
+  "tasks": [
+    "76acefba-3744-462c-8dcc-9f26f1eb1e41",
+    "6c37f995-e8c0-49d5-bde9-0339985a3ec0"
+  ],
+  "completed_at": ""
+}

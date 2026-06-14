@@ -33,14 +33,22 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"gotunix.net/metaboard/internal/store"
 	"gotunix.net/metaboard/internal/ui"
 )
+
+var dataDir string
 
 var rootCmd = &cobra.Command{
 	Use:   "metaboard",
 	Short: "A git-first project metaboard engine",
 	Long: `A high-performance CLI engine for git-first project management. 
 Version your tasks, stories, and milestones directly alongside your code.`,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if dataDir != "" {
+			store.SetDataDir(dataDir)
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},
@@ -56,4 +64,6 @@ func Execute() {
 func init() {
 	rootCmd.SetHelpFunc(ui.HandleHelp)
 	rootCmd.SetUsageFunc(ui.HandleUsage)
+
+	rootCmd.PersistentFlags().StringVarP(&dataDir, "data-dir", "d", "", "base directory for metaboard data")
 }

@@ -58,7 +58,7 @@ var storyCreateCmd = &cobra.Command{
 		}
 		finalSlug, err := store.CreateStory(title, slug, description)
 		if err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		} else {
 			fmt.Println(ui.BoldStyle.Foreground(ui.Green).Render(fmt.Sprintf("✔ Created Story [%s]", finalSlug)))
 		}
@@ -71,7 +71,7 @@ var storyViewCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := ui.ViewStory(args[0]); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		}
 	},
 }
@@ -83,18 +83,27 @@ var storyStatusCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		status := strings.ToUpper(args[1])
 		if !models.IsValidStatus(status, models.ValidStoryStatuses) {
-			fmt.Printf(lipgloss.NewStyle().Foreground(ui.Red).Render("Error: invalid status %q. Allowed: %v\n"), status, models.ValidStoryStatuses)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: invalid status %q. Allowed: %v", status, models.ValidStoryStatuses)))
 			return
 		}
-		store.UpdateStoryStatus(args[0], status)
+		if err := store.UpdateStoryStatus(args[0], status); err != nil {
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
+			return
+		}
+		fmt.Println(ui.BoldStyle.Foreground(ui.Green).Render(fmt.Sprintf("✔ Updated Story [%s] status to %s", args[0], status)))
 	},
 }
 
 var storyEditCmd = &cobra.Command{
 	Use:   "edit <slug>",
 	Short: "Edit a story",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		interactive.EditStoryInteractive(args[0])
+		if err := interactive.EditStoryInteractive(args[0]); err != nil {
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
+			return
+		}
+		fmt.Println(ui.BoldStyle.Foreground(ui.Green).Render("✔ Story updated"))
 	},
 }
 
@@ -103,7 +112,7 @@ func init() {
 	storyCmd.SetUsageFunc(ui.HandleUsage)
 	storyCreateCmd.Flags().StringP("title", "t", "", "Title of the story")
 	storyCreateCmd.Flags().StringP("slug", "s", "", "Unique slug for the story")
-	storyCreateCmd.Flags().StringP("description", "d", "", "Description of the story")
+	storyCreateCmd.Flags().String("description", "", "Description of the story")
 
 	storyCmd.AddCommand(storyCreateCmd)
 	storyCmd.AddCommand(storyViewCmd)

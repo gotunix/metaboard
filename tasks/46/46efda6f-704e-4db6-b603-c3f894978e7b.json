@@ -1,0 +1,14 @@
+{
+  "id": "46efda6f-704e-4db6-b603-c3f894978e7b",
+  "slug": "t-4",
+  "title": "Add 'metaboard doctor' command for health checks",
+  "status": "BACKLOG",
+  "priority": "MEDIUM",
+  "type": "FEAT",
+  "tags": [],
+  "depends_on": [],
+  "assigned_to": "",
+  "description": "",
+  "created_at": "2026-06-11T20:38:17Z",
+  "completed_at": ""
+}

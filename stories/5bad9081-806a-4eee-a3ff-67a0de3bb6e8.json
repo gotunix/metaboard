@@ -1,0 +1,11 @@
+{
+  "id": "5bad9081-806a-4eee-a3ff-67a0de3bb6e8",
+  "title": "Persistence Layer Optimization",
+  "slug": "s-2",
+  "status": "ACTIVE",
+  "description": "Improving the speed and reliability of the flat-file JSON store.",
+  "tasks": [
+    "ba51e7d8-1841-4189-b49d-507670b8ff8f"
+  ],
+  "completed_at": ""
+}

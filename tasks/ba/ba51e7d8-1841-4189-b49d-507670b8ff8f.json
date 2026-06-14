@@ -1,0 +1,14 @@
+{
+  "id": "ba51e7d8-1841-4189-b49d-507670b8ff8f",
+  "slug": "t-3",
+  "title": "Optimize JSON unmarshaling for large datasets",
+  "status": "ACTIVE",
+  "priority": "HIGH",
+  "type": "REFACTOR",
+  "tags": [],
+  "depends_on": [],
+  "assigned_to": "",
+  "description": "",
+  "created_at": "2026-06-11T20:38:12Z",
+  "completed_at": ""
+}

@@ -31,6 +31,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"gotunix.net/metaboard/internal/store"
 	"gotunix.net/metaboard/internal/ui"
@@ -45,7 +46,7 @@ var linkCmd = &cobra.Command{
 		child := args[0]
 		parent := args[1]
 		if err := store.LinkEntities(child, parent); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		} else {
 			fmt.Println(ui.BoldStyle.Foreground(ui.Green).Render("✔ Linked successfully"))
 		}
@@ -59,7 +60,7 @@ var unlinkCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		child := args[0]
 		if err := store.UnlinkEntity(child); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		} else {
 			fmt.Println(ui.BoldStyle.Foreground(ui.Green).Render("✔ Unlinked successfully"))
 		}

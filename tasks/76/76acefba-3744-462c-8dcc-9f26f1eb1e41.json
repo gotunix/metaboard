@@ -1,0 +1,14 @@
+{
+  "id": "76acefba-3744-462c-8dcc-9f26f1eb1e41",
+  "slug": "t-1",
+  "title": "Implement color-coded status indicators",
+  "status": "ACTIVE",
+  "priority": "MEDIUM",
+  "type": "FEAT",
+  "tags": [],
+  "depends_on": [],
+  "assigned_to": "",
+  "description": "",
+  "created_at": "2026-06-11T20:38:02Z",
+  "completed_at": ""
+}

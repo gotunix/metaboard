@@ -65,7 +65,7 @@ var taskCreateCmd = &cobra.Command{
 
 		finalSlug, err := store.CreateTask(title, slug, priority, tType, assigned, description)
 		if err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		} else {
 			fmt.Println(ui.BoldStyle.Foreground(ui.Green).Render(fmt.Sprintf("✔ Created Task [%s]", finalSlug)))
 		}
@@ -78,7 +78,7 @@ var taskViewCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := ui.ViewTask(args[0]); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		}
 	},
 }
@@ -90,11 +90,11 @@ var taskStatusCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		status := strings.ToUpper(strings.ReplaceAll(args[1], "_", "-"))
 		if !models.IsValidStatus(status, models.ValidTaskStatuses) {
-			fmt.Printf(lipgloss.NewStyle().Foreground(ui.Red).Render("Error: invalid status %q. Allowed: %v\n"), status, models.ValidTaskStatuses)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: invalid status %q. Allowed: %v", status, models.ValidTaskStatuses)))
 			return
 		}
 		if err := store.UpdateTaskStatus(args[0], status); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		} else {
 			fmt.Println(ui.BoldStyle.Foreground(ui.Green).Render("✔ Task status updated"))
 		}
@@ -108,7 +108,7 @@ var taskPlanCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		planPath, err := store.EnsureTaskPlan(args[0])
 		if err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 			return
 		}
 
@@ -133,6 +133,30 @@ var taskEditCmd = &cobra.Command{
 			return
 		}
 		idOrSlug := args[0]
+
+		edit, _ := cmd.Flags().GetBool("edit")
+		if edit {
+			resolved, err := store.ResolveEntity(idOrSlug)
+			if err != nil {
+				fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
+				return
+			}
+			if resolved.Type != store.TypeTask {
+				fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %q is a %s, not a TASK", idOrSlug, resolved.Type)))
+				return
+			}
+
+			editor := os.Getenv("EDITOR")
+			if editor == "" {
+				editor = "vim"
+			}
+			c := exec.Command(editor, resolved.Path)
+			c.Stdin = os.Stdin
+			c.Stdout = os.Stdout
+			c.Stderr = os.Stderr
+			c.Run()
+			return
+		}
 
 		// Check if any flags were set
 		if cmd.Flags().NFlag() == 0 {
@@ -189,7 +213,7 @@ var taskEditCmd = &cobra.Command{
 		}
 
 		if err := store.UpdateTask(idOrSlug, update); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		} else {
 			fmt.Println(ui.BoldStyle.Foreground(ui.Green).Render("✔ Task updated successfully"))
 		}
@@ -206,6 +230,7 @@ func init() {
 	taskCreateCmd.Flags().String("assigned-to", "", "Assignee for the task")
 	taskCreateCmd.Flags().String("description", "", "Task description")
 
+	taskEditCmd.Flags().BoolP("edit", "e", false, "Open task in $EDITOR")
 	taskEditCmd.Flags().StringP("title", "t", "", "New title")
 	taskEditCmd.Flags().String("status", "", "New status")
 	taskEditCmd.Flags().StringP("priority", "p", "", "New priority")

@@ -58,7 +58,7 @@ var milestoneCreateCmd = &cobra.Command{
 		}
 		finalSlug, err := store.CreateMilestone(title, slug, description)
 		if err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		} else {
 			fmt.Println(ui.BoldStyle.Foreground(ui.Green).Render(fmt.Sprintf("✔ Created Milestone [%s]", finalSlug)))
 		}
@@ -71,7 +71,7 @@ var milestoneViewCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := ui.ViewMilestone(args[0]); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		}
 	},
 }
@@ -83,19 +83,27 @@ var milestoneStatusCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		status := strings.ToUpper(args[1])
 		if !models.IsValidStatus(status, models.ValidMilestoneStatuses) {
-			fmt.Printf(lipgloss.NewStyle().Foreground(ui.Red).Render("Error: invalid status %q. Allowed: %v\n"), status, models.ValidMilestoneStatuses)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: invalid status %q. Allowed: %v", status, models.ValidMilestoneStatuses)))
 			return
 		}
-		store.UpdateMilestoneStatus(args[0], status)
+		if err := store.UpdateMilestoneStatus(args[0], status); err != nil {
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
+			return
+		}
+		fmt.Println(ui.BoldStyle.Foreground(ui.Green).Render(fmt.Sprintf("✔ Updated Milestone [%s] status to %s", args[0], status)))
 	},
 }
 
 var milestoneEditCmd = &cobra.Command{
 	Use:   "edit <slug>",
 	Short: "Edit a milestone",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		interactive.EditMilestoneInteractive(args[0])
-		// Note: we can add flags here later if needed for milestone dual-mode
+		if err := interactive.EditMilestoneInteractive(args[0]); err != nil {
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
+			return
+		}
+		fmt.Println(ui.BoldStyle.Foreground(ui.Green).Render("✔ Milestone updated"))
 	},
 }
 
@@ -104,7 +112,7 @@ func init() {
 	milestoneCmd.SetUsageFunc(ui.HandleUsage)
 	milestoneCreateCmd.Flags().StringP("title", "t", "", "Title of the milestone")
 	milestoneCreateCmd.Flags().StringP("slug", "s", "", "Unique slug for the milestone")
-	milestoneCreateCmd.Flags().StringP("description", "d", "", "Description of the milestone")
+	milestoneCreateCmd.Flags().String("description", "", "Description of the milestone")
 
 	milestoneCmd.AddCommand(milestoneCreateCmd)
 	milestoneCmd.AddCommand(milestoneViewCmd)

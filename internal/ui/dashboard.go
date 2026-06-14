@@ -67,15 +67,14 @@ func RenderDashboard(mode, target, filter string) error {
 	isMatch := func(eType, status string) bool {
 		s := strings.ToUpper(status)
 		switch filter {
+		case "all":
+			return true
 		case "closed":
 			return s == "COMPLETED"
 		case "cancelled":
 			return s == "CANCELLED"
 		default: // active
-			if eType == "task" {
-				return s == "ACTIVE" || s == "IN-PROGRESS" || s == "BACKLOG"
-			}
-			return s == "ACTIVE" || s == "IN-PROGRESS"
+			return s == "ACTIVE" || s == "IN-PROGRESS" || s == "BACKLOG"
 		}
 	}
 
@@ -161,18 +160,22 @@ func RenderDashboard(mode, target, filter string) error {
 		descStyle := lipgloss.NewStyle().Foreground(Yellow).Italic(true)
 
 		desc := ""
-		if len(m.Description) > 0 {
-			desc = " (" + m.Description[0] + ")"
-			if len(m.Description) > 1 || len(m.Description[0]) > 50 {
-				if len(m.Description[0]) > 50 {
-					desc = " (" + m.Description[0][:47] + "...)"
+		if m.Description != "" {
+			lines := strings.Split(m.Description, "\n")
+			firstLine := lines[0]
+			desc = " (" + firstLine + ")"
+			if len(lines) > 1 || len(firstLine) > 50 {
+				if len(firstLine) > 50 {
+					desc = " (" + firstLine[:47] + "...)"
+				} else {
+					desc = " (" + firstLine + "...)"
 				}
 			}
 		}
 
 		headerLabel := fmt.Sprintf("🏁 %s %s%s ",
 			slugStyle.Render("["+m.Slug+"]"),
-			BoldStyle.Foreground(lipgloss.Color("#FFFFFF")).Render(strings.ToUpper(m.Title)),
+			BoldStyle.Foreground(lipgloss.Color("#FFFFFF")).Render(m.Title),
 			descStyle.Render(desc),
 		)
 
@@ -196,9 +199,10 @@ func RenderDashboard(mode, target, filter string) error {
 
 		// --- Stories under Milestone ---
 		var activeStories []models.Story
+		showAllChildren := (strings.ToUpper(m.Status) == "ACTIVE" || mode == "milestone") && filter == "active"
 		for _, sID := range m.Stories {
 			if s, ok := storyMap[sID]; ok {
-				if isMatch("story", s.Status) {
+				if isMatch("story", s.Status) || showAllChildren {
 					activeStories = append(activeStories, s)
 				} else {
 					// Keep story if it has matching children
@@ -229,12 +233,16 @@ func RenderDashboard(mode, target, filter string) error {
 			}
 
 			desc := ""
-			if len(s.Description) > 0 {
-				desc = " (" + s.Description[0] + ")"
-				if len(s.Description) > 1 || len(s.Description[0]) > 40 {
+			if s.Description != "" {
+				lines := strings.Split(s.Description, "\n")
+				firstLine := lines[0]
+				desc = " (" + firstLine + ")"
+				if len(lines) > 1 || len(firstLine) > 40 {
 					// Simple truncation or indicator
-					if len(s.Description[0]) > 40 {
-						desc = " (" + s.Description[0][:37] + "...)"
+					if len(firstLine) > 40 {
+						desc = " (" + firstLine[:37] + "...)"
+					} else {
+						desc = " (" + firstLine + "...)"
 					}
 				}
 			}
@@ -269,7 +277,7 @@ func RenderDashboard(mode, target, filter string) error {
 				var activeTasks []models.Task
 				for _, tID := range s.Tasks {
 					if t, ok := taskMap[tID]; ok {
-						if isMatch("task", t.Status) {
+						if isMatch("task", t.Status) || showAllChildren {
 							activeTasks = append(activeTasks, t)
 						}
 					}
@@ -299,7 +307,7 @@ func RenderDashboard(mode, target, filter string) error {
 			var activeMilestoneTasks []models.Task
 			for _, tID := range m.Tasks {
 				if t, ok := taskMap[tID]; ok {
-					if isMatch("task", t.Status) {
+					if isMatch("task", t.Status) || showAllChildren {
 						activeMilestoneTasks = append(activeMilestoneTasks, t)
 					}
 				}
@@ -480,24 +488,28 @@ func RenderBacklog() error {
 	// 3. Unclaimed Plans
 	linkedPlans := make(map[string]bool)
 	for _, t := range tasks {
-		planPath := store.GetTaskPlanPath(t.ID)
-		if _, err := os.Stat(planPath); err == nil {
-			linkedPlans[t.ID] = true
+		planPath, err := store.GetTaskPlanPath(t.ID)
+		if err == nil {
+			if _, err := os.Stat(planPath); err == nil {
+				linkedPlans[t.ID] = true
+			}
 		}
 	}
 
-	dir := "plans"
+	tasksDir, err := store.GetTasksDir()
 	var backlogPlans []string
-	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !strings.HasSuffix(d.Name(), ".md") {
+	if err == nil {
+		filepath.WalkDir(tasksDir, func(path string, d os.DirEntry, err error) error {
+			if err != nil || d.IsDir() || !strings.HasSuffix(d.Name(), ".md") {
+				return nil
+			}
+			id := strings.TrimSuffix(d.Name(), ".md")
+			if !linkedPlans[id] {
+				backlogPlans = append(backlogPlans, id)
+			}
 			return nil
-		}
-		id := strings.TrimSuffix(d.Name(), ".md")
-		if !linkedPlans[id] {
-			backlogPlans = append(backlogPlans, id)
-		}
-		return nil
-	})
+		})
+	}
 
 	var backlogMilestones []models.Milestone
 	for _, m := range milestones {
@@ -539,11 +551,15 @@ func RenderBacklog() error {
 			descStyle := lipgloss.NewStyle().Foreground(Yellow).Italic(true)
 
 			desc := ""
-			if len(m.Description) > 0 {
-				desc = " (" + m.Description[0] + ")"
-				if len(m.Description) > 1 || len(m.Description[0]) > 50 {
-					if len(m.Description[0]) > 50 {
-						desc = " (" + m.Description[0][:47] + "...)"
+			if m.Description != "" {
+				lines := strings.Split(m.Description, "\n")
+				firstLine := lines[0]
+				desc = " (" + firstLine + ")"
+				if len(lines) > 1 || len(firstLine) > 50 {
+					if len(firstLine) > 50 {
+						desc = " (" + firstLine[:47] + "...)"
+					} else {
+						desc = " (" + firstLine + "...)"
 					}
 				}
 			}
@@ -573,11 +589,15 @@ func RenderBacklog() error {
 					}
 
 					sDesc := ""
-					if len(s.Description) > 0 {
-						sDesc = " (" + s.Description[0] + ")"
-						if len(s.Description) > 1 || len(s.Description[0]) > 40 {
-							if len(s.Description[0]) > 40 {
-								sDesc = " (" + s.Description[0][:37] + "...)"
+					if s.Description != "" {
+						lines := strings.Split(s.Description, "\n")
+						firstLine := lines[0]
+						sDesc = " (" + firstLine + ")"
+						if len(lines) > 1 || len(firstLine) > 40 {
+							if len(firstLine) > 40 {
+								sDesc = " (" + firstLine[:37] + "...)"
+							} else {
+								sDesc = " (" + firstLine + "...)"
 							}
 						}
 					}
@@ -664,11 +684,15 @@ func RenderBacklog() error {
 			sStatusPadded := lipgloss.NewStyle().Width(12).Render(sStatusStyled)
 
 			desc := ""
-			if len(s.Description) > 0 {
-				desc = " (" + s.Description[0] + ")"
-				if len(s.Description) > 1 || len(s.Description[0]) > 40 {
-					if len(s.Description[0]) > 40 {
-						desc = " (" + s.Description[0][:37] + "...)"
+			if s.Description != "" {
+				lines := strings.Split(s.Description, "\n")
+				firstLine := lines[0]
+				desc = " (" + firstLine + ")"
+				if len(lines) > 1 || len(firstLine) > 40 {
+					if len(firstLine) > 40 {
+						desc = " (" + firstLine[:37] + "...)"
+					} else {
+						desc = " (" + firstLine + "...)"
 					}
 				}
 			}
@@ -726,11 +750,15 @@ func RenderBacklog() error {
 			sStatusPadded := lipgloss.NewStyle().Width(12).Render(sStatusStyled)
 
 			desc := ""
-			if len(s.Description) > 0 {
-				desc = " (" + s.Description[0] + ")"
-				if len(s.Description) > 1 || len(s.Description[0]) > 40 {
-					if len(s.Description[0]) > 40 {
-						desc = " (" + s.Description[0][:37] + "...)"
+			if s.Description != "" {
+				lines := strings.Split(s.Description, "\n")
+				firstLine := lines[0]
+				desc = " (" + firstLine + ")"
+				if len(lines) > 1 || len(firstLine) > 40 {
+					if len(firstLine) > 40 {
+						desc = " (" + firstLine[:37] + "...)"
+					} else {
+						desc = " (" + firstLine + "...)"
 					}
 				}
 			}

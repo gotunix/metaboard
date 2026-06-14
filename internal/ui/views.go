@@ -44,14 +44,14 @@ import (
 )
 
 const Logo = `
-   /$$$$$$$                        /$$
-  | $$__  $$                      | $$
-  | $$  \ $$  /$$$$$$   /$$$$$$$ /$$$$$$    /$$$$$$   /$$$$$$
-  | $$$$$$$/ /$$__  $$ /$$_____/|_  $$_/   /$$__  $$ /$$__  $$
-  | $$__  $$| $$  \ $$|  $$$$$$   | $$    | $$$$$$$$| $$  \__/
-  | $$  \ $$| $$  | $$ \____  $$  | $$ /$$| $$_____/| $$
-  | $$  | $$|  $$$$$$/ /$$$$$$$/  |  $$$$/|  $$$$$$$| $$
-  |__/  |__/ \______/ |_______/    \___/   \_______/|__/
+   /$$      /$$             /$$               /$$$$$$$                                      /$$
+  | $$$    /$$$            | $$              | $$__  $$                                    | $$
+  | $$$$  /$$$$  /$$$$$$  /$$$$$$    /$$$$$$ | $$  \ $$  /$$$$$$   /$$$$$$   /$$$$$$   /$$$$$$$
+  | $$ $$/$$ $$ /$$__  $$|_  $$_/   |____  $$| $$$$$$$  /$$__  $$ |____  $$ /$$__  $$ /$$__  $$
+  | $$  $$$| $$| $$$$$$$$  | $$      /$$$$$$$| $$__  $$| $$  \ $$  /$$$$$$$| $$  \__/| $$  | $$
+  | $$\  $ | $$| $$_____/  | $$ /$$ /$$__  $$| $$  \ $$| $$  | $$ /$$__  $$| $$      | $$  | $$
+  | $$ \/  | $$|  $$$$$$$  |  $$$$/|  $$$$$$$| $$$$$$$/|  $$$$$$/|  $$$$$$$| $$      |  $$$$$$$
+  |__/     |__/ \_______/   \___/   \_______/|_______/  \______/  \_______/|__/       \_______/
 `
 
 func HandleHelp(cmd *cobra.Command, args []string) {
@@ -225,7 +225,7 @@ func ViewMilestone(idOrSlug string) error {
 	sb.WriteString(subStyle.Render(border.BottomLeft+strings.Repeat(border.Bottom, totalWidth-2)+border.BottomRight) + "\n")
 
 	// 3. Description
-	renderWindow(&sb, "DESCRIPTION", strings.Join(m.Description, "\n"), totalWidth)
+	renderWindow(&sb, "DESCRIPTION", m.Description, totalWidth)
 
 	// 4. Stories
 	sort.Slice(m.Stories, func(i, j int) bool {
@@ -246,8 +246,8 @@ func ViewMilestone(idOrSlug string) error {
 	for _, id := range m.Stories {
 		if s, ok := storyMap[id]; ok {
 			desc := ""
-			if len(s.Description) > 0 {
-				desc = " (" + s.Description[0] + ")"
+			if s.Description != "" {
+				desc = " (" + strings.Split(s.Description, "\n")[0] + ")"
 			}
 			storyLines = append(storyLines, fmt.Sprintf("• %s %s%s", slugStyle.Render("["+s.Slug+"]"), titleStyle.Render(s.Title), descStyle.Render(desc)))
 
@@ -393,7 +393,7 @@ func ViewStory(idOrSlug string) error {
 	sb.WriteString(subStyle.Render(border.BottomLeft+strings.Repeat(border.Bottom, totalWidth-2)+border.BottomRight) + "\n")
 
 	// 3. Description
-	renderWindow(&sb, "DESCRIPTION", strings.Join(s.Description, "\n"), totalWidth)
+	renderWindow(&sb, "DESCRIPTION", s.Description, totalWidth)
 
 	// 4. Tasks
 	sort.Slice(s.Tasks, func(i, j int) bool {
@@ -521,16 +521,18 @@ func ViewTask(idOrSlug string) error {
 
 	// 3. Description
 	var sbDesc strings.Builder
-	renderWindow(&sbDesc, "DESCRIPTION", strings.Join(t.Description, "\n"), totalWidth)
+	renderWindow(&sbDesc, "DESCRIPTION", t.Description, totalWidth)
 	fmt.Println("") // Space before Description
 	fmt.Print(sbDesc.String())
 
 	// 4. Implementation Plan (Inline from Sidecar .md)
-	planPath := store.GetTaskPlanPath(t.ID)
+	planPath, err := store.GetTaskPlanPath(t.ID)
 	planContent := ""
-	if _, err := os.Stat(planPath); err == nil {
-		data, _ := os.ReadFile(planPath)
-		planContent = string(data)
+	if err == nil {
+		if _, err := os.Stat(planPath); err == nil {
+			data, _ := os.ReadFile(planPath)
+			planContent = string(data)
+		}
 	}
 
 	if planContent != "" {
@@ -565,18 +567,18 @@ func renderWindow(sb *strings.Builder, title, content string, width int) {
 	// We use the full width minus borders and padding for the internal wrap
 	// Then we iterate over the lines rendered by lipgloss
 	contentStyle := lipgloss.NewStyle().
-		Width(width - 2). // Exact width between borders
-		Padding(0, 2)     // Internal padding
+		Width(width-2). // Exact width between borders
+		Padding(0, 2)   // Internal padding
 
 	renderedContent := contentStyle.Render(content)
 	lines := strings.Split(renderedContent, "\n")
-	
+
 	for _, line := range lines {
 		// Calculate how much space is left after lipgloss padding
 		// lipgloss.Width(line) should match width-2 now
 		lineW := lipgloss.Width(line)
 		padding := (width - 2) - lineW
-		
+
 		sb.WriteString(subStyle.Render("│") + line + strings.Repeat(" ", padding) + subStyle.Render("│") + "\n")
 	}
 

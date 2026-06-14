@@ -1,0 +1,14 @@
+{
+  "id": "b2263f44-0549-47f9-a20d-11dfdd8e10d3",
+  "slug": "t-5",
+  "title": "Implement automated tag suggestion logic",
+  "status": "BACKLOG",
+  "priority": "LOW",
+  "type": "CHORE",
+  "tags": [],
+  "depends_on": [],
+  "assigned_to": "",
+  "description": "",
+  "created_at": "2026-06-11T20:38:22Z",
+  "completed_at": ""
+}

@@ -1,0 +1,14 @@
+{
+  "id": "53a27f91-dd93-4628-8368-38b29aa0b268",
+  "title": "v0.1.0",
+  "slug": "m-1",
+  "status": "ACTIVE",
+  "description": "Core foundation",
+  "stories": [
+    "bde8ecd0-22f5-4050-a0d0-46292895e928",
+    "5bad9081-806a-4eee-a3ff-67a0de3bb6e8",
+    "db9c30d9-1ad3-4e64-9fc3-19f907ff41cc"
+  ],
+  "tasks": [],
+  "completed_at": ""
+}

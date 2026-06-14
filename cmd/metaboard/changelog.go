@@ -31,6 +31,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"gotunix.net/metaboard/internal/ui"
 )
@@ -45,7 +46,7 @@ var changelogCmd = &cobra.Command{
 			out = args[0]
 		}
 		if err := ui.GenerateChangelog(out); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Println(lipgloss.NewStyle().Foreground(ui.Red).Render(fmt.Sprintf("Error: %v", err)))
 		} else {
 			fmt.Println(ui.BoldStyle.Foreground(ui.Green).Render("✔ Changelog generated successfully"))
 		}

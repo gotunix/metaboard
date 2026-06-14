@@ -59,7 +59,7 @@ type Milestone struct {
 	Title       string   `json:"title"`
 	Slug        string   `json:"slug"`
 	Status      string   `json:"status"`
-	Description []string `json:"description"`
+	Description string   `json:"description"`
 	Stories     []string `json:"stories"`
 	Tasks       []string `json:"tasks"`
 	CompletedAt string   `json:"completed_at"`
@@ -70,7 +70,7 @@ type Story struct {
 	Title       string   `json:"title"`
 	Slug        string   `json:"slug"`
 	Status      string   `json:"status"`
-	Description []string `json:"description"`
+	Description string   `json:"description"`
 	Tasks       []string `json:"tasks"`
 	CompletedAt string   `json:"completed_at"`
 }
@@ -85,7 +85,7 @@ type Task struct {
 	Tags        []string `json:"tags"`
 	DependsOn   []string `json:"depends_on"`
 	AssignedTo  string   `json:"assigned_to"`
-	Description []string `json:"description"`
+	Description string   `json:"description"`
 	CreatedAt   string   `json:"created_at"`
 	CompletedAt string   `json:"completed_at"`
 }

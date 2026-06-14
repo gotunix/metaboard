@@ -39,11 +39,25 @@ func setupTest(t *testing.T) func() {
 	if err != nil {
 		t.Fatalf("failed to get current directory: %v", err)
 	}
+
+	// Reset store state
+	SetDataDir("")
+	resolvedDir = ""
+
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatalf("failed to change directory to temp: %v", err)
 	}
+
+	// Initialize the store in the temp dir
+	if err := Initialize("."); err != nil {
+		t.Fatalf("failed to initialize store: %v", err)
+	}
+
 	return func() {
 		os.Chdir(oldDir)
+		// Reset store state after test too
+		SetDataDir("")
+		resolvedDir = ""
 	}
 }
 
@@ -67,7 +81,7 @@ func TestMilestoneCRUD(t *testing.T) {
 	if m.Title != title {
 		t.Errorf("expected title %q, got %q", title, m.Title)
 	}
-	if len(m.Description) != 2 || m.Description[1] != "Second line" {
+	if m.Description != "First line\nSecond line" {
 		t.Errorf("description not parsed correctly: %v", m.Description)
 	}
 
