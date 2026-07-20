@@ -1,0 +1,38 @@
+[
+  {
+    "id": "6fe8ee5c-d1fd-492c-81b9-2296d9f14ba9",
+    "version": 1,
+    "slug": "t-6fe8ee5c",
+    "title": "Test task 2",
+    "status": "BACKLOG",
+    "priority": "NORMAL",
+    "type": "TASK",
+    "tags": [],
+    "depends_on": [],
+    "assigned_to": "",
+    "description": "",
+    "created_at": "2026-07-18T21:02:12.090831786-04:00",
+    "updated_at": "2026-07-18T21:02:12.090942248-04:00",
+    "completed_at": "",
+    "pull_requests": null,
+    "changelog": false
+  },
+  {
+    "id": "6fe8ee5c-d1fd-492c-81b9-2296d9f14ba9",
+    "version": 2,
+    "slug": "t-6fe8ee5c",
+    "title": "Test task 2",
+    "status": "BACKLOG",
+    "priority": "NORMAL",
+    "type": "TASK",
+    "tags": [],
+    "depends_on": [],
+    "assigned_to": "",
+    "description": "",
+    "created_at": "2026-07-18T21:02:12.090831786-04:00",
+    "updated_at": "2026-07-18T21:02:12.091850024-04:00",
+    "completed_at": "",
+    "pull_requests": null,
+    "changelog": false
+  }
+]
