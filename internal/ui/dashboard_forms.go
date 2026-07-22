@@ -345,7 +345,7 @@ func (m *dashboardModel) initEditTaskForm(slug string) error {
 
 	m.resizeFormFields()
 	m.formFocusIndex = 0
-	m.formTotalFields = 12
+	m.formTotalFields = 13
 	return nil
 }
 
